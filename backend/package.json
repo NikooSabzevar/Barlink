@@ -2,6 +2,9 @@
   "name": "barlink-backend",
   "version": "1.0.0",
   "private": true,
+  "engines": {
+    "node": "20.x"
+  },
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "start": "node dist/main.js",
