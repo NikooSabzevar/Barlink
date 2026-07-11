@@ -1,0 +1,53 @@
+{
+  "expo": {
+    "name": "BarLink",
+    "slug": "barlink",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0f0f1a"
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "single",
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-location",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow BarLink to access your camera for QR code scanning."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#7c3aed"
+        }
+      ]
+    ],
+    "scheme": "barlink",
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0f0f1a"
+      },
+      "permissions": ["ACCESS_FINE_LOCATION", "ACCESS_BACKGROUND_LOCATION"]
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.barlink.app",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "BarLink uses your location to verify you are at the bar.",
+        "NSLocationAlwaysUsageDescription": "BarLink uses your location in the background to monitor your proximity to the bar."
+      }
+    }
+  }
+}

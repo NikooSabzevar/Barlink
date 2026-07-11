@@ -1,0 +1,198 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(uuid())
+  email         String    @unique
+  phone         String?   @unique
+  passwordHash  String
+  displayName   String
+  role          UserRole  @default(PATRON)
+  pushToken     String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  queueEntries  QueueEntry[]
+  barStaff      BarStaff[]
+  analytics     AnalyticsEvent[]
+  profile       Profile?
+  sentMessages  Message[]  @relation("SentMessages")
+  receivedMessages Message[] @relation("ReceivedMessages")
+
+  @@map("users")
+}
+
+model Bar {
+  id              String    @id @default(uuid())
+  name            String
+  description     String?
+  address         String
+  latitude        Float
+  longitude       Float
+  maxCapacity     Int
+  currentCount    Int       @default(0)
+  isActive        Boolean   @default(true)
+  openTime        String
+  closeTime       String
+  coverCharge     Float?
+  promos          String[]
+  logoUrl         String?
+  geofenceRadiusM Float     @default(200)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  staff           BarStaff[]
+  queueEntries    QueueEntry[]
+  analytics       AnalyticsEvent[]
+  demographics    Demographics[]
+  deals           Deal[]
+
+  @@map("bars")
+}
+
+model Profile {
+  id          String   @id @default(uuid())
+  userId      String   @unique
+  photoUrl    String?
+  bio         String?
+  gender      String?
+  age         Int?
+  openToChat  Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("profiles")
+}
+
+model Deal {
+  id          String    @id @default(uuid())
+  barId       String
+  title       String
+  description String
+  startsAt    DateTime
+  endsAt      DateTime
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  bar         Bar       @relation(fields: [barId], references: [id], onDelete: Cascade)
+
+  @@map("deals")
+}
+
+model Message {
+  id          String   @id @default(uuid())
+  senderId    String
+  receiverId  String
+  barId       String
+  body        String
+  readAt      DateTime?
+  createdAt   DateTime @default(now())
+
+  sender      User     @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver    User     @relation("ReceivedMessages", fields: [receiverId], references: [id], onDelete: Cascade)
+
+  @@index([senderId, receiverId])
+  @@index([barId])
+  @@map("messages")
+}
+
+model BarStaff {
+  id        String    @id @default(uuid())
+  userId    String
+  barId     String
+  role      StaffRole @default(DOORSTAFF)
+  createdAt DateTime  @default(now())
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bar       Bar       @relation(fields: [barId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, barId])
+  @@map("bar_staff")
+}
+
+model QueueEntry {
+  id              String        @id @default(uuid())
+  userId          String
+  barId           String
+  partySize       Int           @default(1)
+  position        Int
+  status          QueueStatus   @default(WAITING)
+  qrCode          String        @unique
+  joinedAt        DateTime      @default(now())
+  admittedAt      DateTime?
+  exitedAt        DateTime?
+  lastSeenAt      DateTime?
+  awayStartedAt   DateTime?
+  gracePeriodEnds DateTime?
+  evictionJobId   String?
+  awayJobId       String?
+  updatedAt       DateTime      @updatedAt
+
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bar             Bar           @relation(fields: [barId], references: [id], onDelete: Cascade)
+
+  @@map("queue_entries")
+}
+
+model Demographics {
+  id            String    @id @default(uuid())
+  barId         String
+  timestamp     DateTime  @default(now())
+  totalInside   Int
+  maleCount     Int       @default(0)
+  femaleCount   Int       @default(0)
+  groupSize1    Int       @default(0)
+  groupSize2    Int       @default(0)
+  groupSize3    Int       @default(0)
+  groupSizePlus Int       @default(0)
+  avgWaitMins   Float     @default(0)
+  queueLength   Int       @default(0)
+
+  bar           Bar       @relation(fields: [barId], references: [id], onDelete: Cascade)
+
+  @@map("demographics")
+}
+
+model AnalyticsEvent {
+  id        String    @id @default(uuid())
+  barId     String
+  userId    String?
+  eventType String
+  metadata  Json?
+  createdAt DateTime  @default(now())
+
+  bar       Bar       @relation(fields: [barId], references: [id], onDelete: Cascade)
+  user      User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@map("analytics_events")
+}
+
+enum UserRole {
+  PATRON
+  STAFF
+  ADMIN
+}
+
+enum StaffRole {
+  DOORSTAFF
+  MANAGER
+  OWNER
+}
+
+enum QueueStatus {
+  WAITING
+  NOTIFIED
+  INSIDE
+  AWAY
+  EXITED
+  EVICTED
+}

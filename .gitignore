@@ -1,0 +1,30 @@
+# dependencies
+node_modules
+
+# production builds
+backend/dist
+frontend/dist
+frontend/web-build
+frontend/ios
+frontend/android
+
+# env files
+.env
+.env.local
+.env.*.local
+
+# expo
+.expo
+
+# logs
+*.log
+npm-debug.log*
+
+# misc
+.DS_Store
+.vscode
+.idea
+
+# render/vercel
+*.render
+.vercel
