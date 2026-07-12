@@ -103,7 +103,7 @@ async function main() {
 
   const bar1 = await prisma.bar.upsert({
     where: { id: 'bar-001' },
-    update: { currentCount: 45 },
+    update: {},
     create: {
       id: 'bar-001',
       name: 'The Rusty Anchor',
@@ -123,7 +123,7 @@ async function main() {
 
   const bar2 = await prisma.bar.upsert({
     where: { id: 'bar-002' },
-    update: { currentCount: 72 },
+    update: {},
     create: {
       id: 'bar-002',
       name: 'Neon Lounge',
@@ -155,42 +155,60 @@ async function main() {
   const inOneHour = new Date(now.getTime() + 60 * 60 * 1000);
   const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
 
-  await prisma.deal.createMany({
-    data: [
-      {
-        barId: bar1.id,
-        title: '🍺 Happy Hour Drafts',
-        description: 'All domestic drafts $3 until 8pm.',
-        startsAt: new Date(now.setHours(18, 0, 0, 0)),
-        endsAt: new Date(now.setHours(20, 0, 0, 0)),
-        isActive: true,
-      },
-      {
-        barId: bar1.id,
-        title: '🍷 Wine Wednesday',
-        description: 'Half off all glasses of wine.',
-        startsAt: new Date(now.setHours(18, 0, 0, 0)),
-        endsAt: new Date(now.setHours(23, 59, 0, 0)),
-        isActive: true,
-      },
-      {
-        barId: bar2.id,
-        title: '🍸 Rooftop Cocktails',
-        description: 'Signature cocktails 2-for-1 on the terrace.',
-        startsAt: new Date(now.setHours(20, 0, 0, 0)),
-        endsAt: inOneHour,
-        isActive: true,
-      },
-      {
-        barId: bar2.id,
-        title: '🥃 Bourbon Night',
-        description: 'Premium bourbon flights 25% off.',
-        startsAt: tomorrow,
-        endsAt: new Date(tomorrow.getTime() + 4 * 60 * 60 * 1000),
-        isActive: true,
-      },
-    ],
-    skipDuplicates: true,
+  await prisma.deal.upsert({
+    where: { id: 'deal-rusty-1' },
+    update: {},
+    create: {
+      id: 'deal-rusty-1',
+      barId: bar1.id,
+      title: '🍺 Happy Hour Drafts',
+      description: 'All domestic drafts $3 until 8pm.',
+      startsAt: new Date(now.setHours(18, 0, 0, 0)),
+      endsAt: new Date(now.setHours(20, 0, 0, 0)),
+      isActive: true,
+    },
+  });
+
+  await prisma.deal.upsert({
+    where: { id: 'deal-rusty-2' },
+    update: {},
+    create: {
+      id: 'deal-rusty-2',
+      barId: bar1.id,
+      title: '🍷 Wine Wednesday',
+      description: 'Half off all glasses of wine.',
+      startsAt: new Date(now.setHours(18, 0, 0, 0)),
+      endsAt: new Date(now.setHours(23, 59, 0, 0)),
+      isActive: true,
+    },
+  });
+
+  await prisma.deal.upsert({
+    where: { id: 'deal-neon-1' },
+    update: {},
+    create: {
+      id: 'deal-neon-1',
+      barId: bar2.id,
+      title: '🍸 Rooftop Cocktails',
+      description: 'Signature cocktails 2-for-1 on the terrace.',
+      startsAt: new Date(now.setHours(20, 0, 0, 0)),
+      endsAt: inOneHour,
+      isActive: true,
+    },
+  });
+
+  await prisma.deal.upsert({
+    where: { id: 'deal-neon-2' },
+    update: {},
+    create: {
+      id: 'deal-neon-2',
+      barId: bar2.id,
+      title: '🥃 Bourbon Night',
+      description: 'Premium bourbon flights 25% off.',
+      startsAt: tomorrow,
+      endsAt: new Date(tomorrow.getTime() + 4 * 60 * 60 * 1000),
+      isActive: true,
+    },
   });
 
   await prisma.profile.upsert({
@@ -253,8 +271,6 @@ async function main() {
       openToChat: true,
     },
   });
-
-  await prisma.queueEntry.deleteMany({});
 
   // Seeded demo crowd for The Rusty Anchor: 45 people total
   // 15 generated parties (41 people) + 3 named patrons (1+2+1 = 4 people)
