@@ -13,8 +13,9 @@ async function bootstrap() {
     'http://localhost:3001',
   ];
 
-  // Deployed Vercel frontend URL
+  // Deployed Vercel frontend URLs
   allowedOrigins.push('https://barlink-h6anpufjw-barlink.vercel.app');
+  allowedOrigins.push('https://barlink-barlink.vercel.app');
 
   app.enableCors({
     origin: (origin, callback) => {
