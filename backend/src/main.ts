@@ -6,12 +6,19 @@ import { AppModule } from './app.module';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  const allowedOrigins = process.env.CORS_ORIGINS?.split(',') || [
+  const defaultOrigins = [
     'http://localhost:8080',
     'http://localhost:8082',
     'http://localhost:19006',
     'http://localhost:3001',
   ];
+
+  const envOrigins = (process.env.CORS_ORIGINS ?? '')
+    .split(',')
+    .map((o) => o.trim())
+    .filter(Boolean);
+
+  const allowedOrigins = envOrigins.length > 0 ? envOrigins : defaultOrigins;
 
   // Deployed Vercel frontend URLs
   allowedOrigins.push('https://barlink-h6anpufjw-barlink.vercel.app');
