@@ -54,6 +54,8 @@ export const queueApi = {
   myEntry: (barId: string) => api.get(`/queue/${barId}/my-entry`),
   admit: (barId: string, qrCode: string) =>
     api.post(`/queue/${barId}/admit`, { qrCode }),
+  simulateCheckIn: (barId: string) =>
+    api.post(`/queue/${barId}/simulate-checkin`),
   markAway: (entryId: string) => api.patch(`/queue/${entryId}/away`),
   markExit: (entryId: string) => api.patch(`/queue/${entryId}/exit`),
   override: (entryId: string, action: 'reinstate' | 'evict') =>

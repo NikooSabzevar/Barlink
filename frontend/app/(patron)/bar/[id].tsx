@@ -17,12 +17,14 @@ export default function BarDetailScreen() {
   const [bar, setBar] = useState<any>(null);
   const [deals, setDeals] = useState<any[]>([]);
   const [loungeUsers, setLoungeUsers] = useState<any[]>([]);
+  const [myProfile, setMyProfile] = useState<any>(null);
   const [socialStats, setSocialStats] = useState<any>(null);
   const [activeTab, setActiveTab] = useState<TabKey>('info');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchAll();
+    fetchMyProfile();
     setupSocket();
   }, [id]);
 
@@ -50,6 +52,16 @@ export default function BarDetailScreen() {
     } catch {}
   }
 
+  async function fetchMyProfile() {
+    if (!user) return;
+    try {
+      const res = await socialApi.getProfile(user.id);
+      setMyProfile(res.data);
+    } catch {
+      setMyProfile(null);
+    }
+  }
+
   async function setupSocket() {
     await getSocket();
     subscribeToBar(id!, (data: any) => {
@@ -59,7 +71,10 @@ export default function BarDetailScreen() {
 
   function handleTabChange(tab: TabKey) {
     setActiveTab(tab);
-    if (tab === 'lounge') fetchLounge();
+    if (tab === 'lounge') {
+      fetchMyProfile();
+      fetchLounge();
+    }
   }
 
   if (loading) {
@@ -225,6 +240,29 @@ export default function BarDetailScreen() {
             <Text style={styles.loungeHint}>
               People currently inside who are open to chatting
             </Text>
+
+            {!user && (
+              <View style={styles.consentCard}>
+                <Text style={styles.consentTitle}>Sign in to join the Lounge</Text>
+                <Text style={styles.consentSub}>Create an account to chat with people inside.</Text>
+                <TouchableOpacity style={styles.consentBtn} onPress={() => router.push('/(auth)/login')}>
+                  <Text style={styles.consentBtnText}>Sign In</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {user && !myProfile?.openToChat && (
+              <View style={styles.consentCard}>
+                <Text style={styles.consentTitle}>Enable Chat</Text>
+                <Text style={styles.consentSub}>
+                  Turn on chat and choose what you want to share (gender, age, bio, photo).
+                </Text>
+                <TouchableOpacity style={styles.consentBtn} onPress={() => router.push('/(patron)/profile')}>
+                  <Text style={styles.consentBtnText}>Set Up Chat Profile</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
             {loungeUsers.length === 0 ? (
               <View style={styles.emptyState}>
                 <Text style={styles.emptyIcon}>👥</Text>
@@ -256,9 +294,14 @@ export default function BarDetailScreen() {
                       )}
                     </View>
                     <Text style={styles.loungeName} numberOfLines={1}>{u.displayName}</Text>
-                    {u.profile?.age && (
-                      <Text style={styles.loungeAge}>{u.profile.age}</Text>
-                    )}
+                    <View style={{ flexDirection: 'row', gap: 6, marginBottom: 4 }}>
+                      {u.profile?.gender && (
+                        <Text style={styles.loungeGender}>{u.profile.gender}</Text>
+                      )}
+                      {u.profile?.age && (
+                        <Text style={styles.loungeAge}>{u.profile.age}</Text>
+                      )}
+                    </View>
                     {u.profile?.bio && (
                       <Text style={styles.loungeBio} numberOfLines={2}>{u.profile.bio}</Text>
                     )}
@@ -436,6 +479,7 @@ const styles = StyleSheet.create({
   loungeAvatarImg: { width: 60, height: 60, borderRadius: 30 },
   loungeAvatarEmoji: { fontSize: 26, color: '#a78bfa', fontWeight: 'bold' },
   loungeName: { color: '#fff', fontSize: 14, fontWeight: 'bold', marginBottom: 2 },
+  loungeGender: { color: '#a78bfa', fontSize: 12, fontWeight: '600' },
   loungeAge: { color: '#6b7280', fontSize: 12, marginBottom: 4 },
   loungeBio: { color: '#9ca3af', fontSize: 11, textAlign: 'center', marginBottom: 8 },
   chatBadge: {
@@ -448,6 +492,24 @@ const styles = StyleSheet.create({
   },
   chatBadgeText: { color: '#a78bfa', fontSize: 12, fontWeight: '600' },
 
+  consentCard: {
+    backgroundColor: '#1c1c2e',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#7c3aed44',
+    alignItems: 'center',
+  },
+  consentTitle: { color: '#fff', fontSize: 17, fontWeight: 'bold', marginBottom: 6 },
+  consentSub: { color: '#6b7280', fontSize: 13, textAlign: 'center', marginBottom: 12, lineHeight: 18 },
+  consentBtn: {
+    backgroundColor: '#7c3aed',
+    borderRadius: 12,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+  },
+  consentBtnText: { color: '#fff', fontSize: 15, fontWeight: 'bold' },
   emptyState: { alignItems: 'center', paddingTop: 40, paddingBottom: 20 },
   emptyIcon: { fontSize: 48, marginBottom: 12 },
   emptyTitle: { color: '#fff', fontSize: 17, fontWeight: 'bold', marginBottom: 6 },

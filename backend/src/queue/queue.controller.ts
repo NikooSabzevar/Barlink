@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Body, Param, Patch, UseGuards, Request } from '@nestjs/common';
+import { Controller, Post, Get, Body, Param, Patch, UseGuards, Request, ForbiddenException } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { QueueService } from './queue.service';
 import { IsString, IsNumber, Min, Max, IsIn } from 'class-validator';
@@ -71,5 +71,13 @@ export class QueueController {
   @Get(':barId/my-entry')
   getMyEntry(@Param('barId') barId: string, @Request() req: any) {
     return this.queueService.getEntryByUser(req.user.id, barId);
+  }
+
+  @Post(':barId/simulate-checkin')
+  simulateCheckIn(@Param('barId') barId: string, @Request() req: any) {
+    if (req.user.role !== 'STAFF' && req.user.role !== 'ADMIN') {
+      throw new ForbiddenException('Only staff or admins can simulate check-ins');
+    }
+    return this.queueService.simulateCheckIn(barId);
   }
 }

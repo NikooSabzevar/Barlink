@@ -32,6 +32,7 @@ export default function RootLayout() {
         <Stack.Screen name="(staff)/door" options={{ title: 'Door Mode' }} />
         <Stack.Screen name="(staff)/dashboard" options={{ title: 'Queue Dashboard' }} />
         <Stack.Screen name="(patron)/chat/[userId]" options={{ title: 'Message' }} />
+        <Stack.Screen name="(patron)/profile" options={{ title: 'Chat Profile' }} />
       </Stack>
     </GestureHandlerRootView>
   );

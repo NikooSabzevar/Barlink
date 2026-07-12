@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet,
-  ScrollView, RefreshControl, ActivityIndicator,
+  ScrollView, RefreshControl, ActivityIndicator, Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { barsApi, queueApi } from '../../lib/api';
@@ -16,19 +16,23 @@ export default function DashboardScreen() {
   const [bar, setBar] = useState<any>(null);
   const [queue, setQueue] = useState<any[]>([]);
   const [velocity, setVelocity] = useState<number>(0);
+  const [socialStats, setSocialStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [simulating, setSimulating] = useState(false);
 
   const fetchAll = useCallback(async () => {
     try {
-      const [barRes, queueRes, velRes] = await Promise.all([
+      const [barRes, queueRes, velRes, statsRes] = await Promise.all([
         barsApi.get(BAR_ID),
         queueApi.state(BAR_ID),
         barsApi.velocity(BAR_ID),
+        barsApi.socialStats(BAR_ID).catch(() => ({ data: null })),
       ]);
       setBar(barRes.data);
       setQueue(queueRes.data);
       setVelocity(velRes.data);
+      setSocialStats(statsRes.data);
     } catch {
     } finally {
       setLoading(false);
@@ -44,6 +48,19 @@ export default function DashboardScreen() {
   async function setupSocket() {
     const socket = await getSocket();
     subscribeToBar(BAR_ID, () => fetchAll());
+  }
+
+  async function handleSimulateCheckIn() {
+    setSimulating(true);
+    try {
+      await queueApi.simulateCheckIn(BAR_ID);
+      Alert.alert('✅ Simulated', 'Random patron checked in.');
+      fetchAll();
+    } catch (e: any) {
+      Alert.alert('Error', e?.response?.data?.message ?? 'Failed to simulate check-in.');
+    } finally {
+      setSimulating(false);
+    }
   }
 
   const occupancyPct = bar ? Math.round((bar.currentCount / bar.maxCapacity) * 100) : 0;
@@ -107,7 +124,49 @@ export default function DashboardScreen() {
           <Text style={styles.actionLabel}>Door Mode</Text>
           <Text style={styles.actionSub}>Scan & admit patrons</Text>
         </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.actionCard, { borderColor: '#10b98144', marginTop: 12 }]}
+          onPress={handleSimulateCheckIn}
+          disabled={simulating}
+        >
+          <Text style={styles.actionIcon}>🎲</Text>
+          <Text style={[styles.actionLabel, { color: '#10b981' }]}>Simulate Walk-In</Text>
+          <Text style={styles.actionSub}>
+            {simulating ? 'Adding random patron...' : 'Randomly check in a patron'}
+          </Text>
+        </TouchableOpacity>
       </View>
+
+      {socialStats && (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>🧑‍🤝‍🧑 People Inside</Text>
+          <View style={styles.statGrid}>
+            <MetricBox label="Total" value={`${socialStats.total}`} sub="inside" color="#fff" />
+            <MetricBox label="Profiles" value={`${socialStats.withProfile}`} sub="of people" color="#a78bfa" />
+            <MetricBox label="People" value={`${socialStats.people}`} sub="counted" color="#3b82f6" />
+          </View>
+          <Text style={styles.subHead}>Gender</Text>
+          <View style={styles.statGrid}>
+            <MetricBox label="Male" value={`${socialStats.genderRatio.male}`} sub={`${socialStats.genderRatio.malePct}%`} color="#3b82f6" />
+            <MetricBox label="Female" value={`${socialStats.genderRatio.female}`} sub={`${socialStats.genderRatio.femalePct}%`} color="#ec4899" />
+            <MetricBox label="Other" value={`${socialStats.genderRatio.other}`} sub="of people" color="#6b7280" />
+          </View>
+          <Text style={styles.subHead}>Age</Text>
+          <View style={styles.statGrid}>
+            {Object.entries(socialStats.ageBuckets).map(([label, count]: [string, any]) => (
+              <MetricBox key={label} label={label} value={`${count}`} sub="" color="#a78bfa" />
+            ))}
+          </View>
+          <Text style={styles.subHead}>Group Size</Text>
+          <View style={styles.statGrid}>
+            <MetricBox label="Solo" value={`${socialStats.groupSizes.solo}`} sub="" color="#10b981" />
+            <MetricBox label="Pairs" value={`${socialStats.groupSizes.pairs}`} sub="" color="#10b981" />
+            <MetricBox label="Trios" value={`${socialStats.groupSizes.trios}`} sub="" color="#10b981" />
+            <MetricBox label="4+" value={`${socialStats.groupSizes.groups}`} sub="" color="#10b981" />
+          </View>
+        </View>
+      )}
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Live Queue ({queue.length})</Text>
@@ -201,7 +260,7 @@ const styles = StyleSheet.create({
   },
   heroBarName: { color: '#fff', fontSize: 20, fontWeight: 'bold', marginBottom: 16 },
   heroMetrics: { flexDirection: 'row', justifyContent: 'space-around', marginBottom: 16 },
-  metricBox: { alignItems: 'center' },
+  metricBox: { alignItems: 'center', flex: 1, minWidth: '30%' },
   metricValue: { fontSize: 36, fontWeight: 'bold' },
   metricSub: { color: '#6b7280', fontSize: 12 },
   metricLabel: { color: '#9ca3af', fontSize: 13, marginTop: 2 },
@@ -212,7 +271,7 @@ const styles = StyleSheet.create({
   pill: { flex: 1, borderRadius: 12, borderWidth: 1, padding: 12, alignItems: 'center' },
   pillCount: { fontSize: 24, fontWeight: 'bold' },
   pillLabel: { color: '#6b7280', fontSize: 11, marginTop: 2 },
-  actionsRow: { marginHorizontal: 16, marginBottom: 12 },
+  actionsRow: { marginHorizontal: 16, marginBottom: 12, gap: 0 },
   actionCard: {
     backgroundColor: '#1c1c2e',
     borderRadius: 16,
@@ -236,6 +295,8 @@ const styles = StyleSheet.create({
     borderColor: '#2d2d44',
   },
   sectionTitle: { color: '#fff', fontSize: 16, fontWeight: 'bold', marginBottom: 12 },
+  subHead: { color: '#6b7280', fontSize: 12, marginTop: 12, marginBottom: 8 },
+  statGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   emptyText: { color: '#4b5563', textAlign: 'center', paddingVertical: 20, fontSize: 14 },
   queueRow: {
     flexDirection: 'row',

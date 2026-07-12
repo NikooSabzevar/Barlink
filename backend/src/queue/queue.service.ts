@@ -4,6 +4,7 @@ import { RedisService } from '../redis/redis.service';
 import { BarsService } from '../bars/bars.service';
 import { BarLinkGateway } from '../gateway/barlink.gateway';
 import * as QRCode from 'qrcode';
+import * as bcrypt from 'bcryptjs';
 import { v4 as uuidv4 } from 'uuid';
 import { Queue } from 'bullmq';
 import { ConfigService } from '@nestjs/config';
@@ -217,6 +218,70 @@ export class QueueService {
     return this.prisma.queueEntry.findFirst({
       where: { userId, barId, status: { in: ['WAITING', 'NOTIFIED', 'INSIDE', 'AWAY'] } },
     });
+  }
+
+  async simulateCheckIn(barId: string) {
+    const bar = await this.prisma.bar.findUnique({ where: { id: barId } });
+    if (!bar || !bar.isActive) throw new NotFoundException('Bar not found or inactive');
+    if (bar.currentCount >= bar.maxCapacity) {
+      throw new BadRequestException('Bar is at capacity');
+    }
+
+    const id = uuidv4();
+    const gender = Math.random() < 0.5 ? 'male' : 'female';
+    const age = Math.floor(Math.random() * 23) + 18;
+    const partySize = Math.floor(Math.random() * 4) + 1;
+    const names = [
+      'Alex', 'Jordan', 'Taylor', 'Morgan', 'Casey', 'Riley', 'Quinn', 'Avery',
+      'Sam', 'Jamie', 'Cameron', 'Dakota', 'Reese', 'Skyler', 'Peyton', 'Sawyer',
+    ];
+    const displayName = `${names[Math.floor(Math.random() * names.length)]} ${String.fromCharCode(65 + Math.floor(Math.random() * 26))}.`;
+    const email = `sim-${id.slice(0, 8)}@barlink.com`;
+
+    const user = await this.prisma.user.create({
+      data: {
+        email,
+        displayName,
+        passwordHash: await bcrypt.hash(uuidv4(), 10),
+        role: 'PATRON' as any,
+      },
+    });
+
+    await this.prisma.profile.create({
+      data: {
+        userId: user.id,
+        gender,
+        age,
+        bio: 'Here for the vibes.',
+        photoUrl: `https://i.pravatar.cc/150?u=${encodeURIComponent(email)}`,
+        openToChat: true,
+      },
+    });
+
+    const qrData = uuidv4();
+    const qrCodeDataUrl = await QRCode.toDataURL(qrData);
+
+    const entry = await this.prisma.queueEntry.create({
+      data: {
+        userId: user.id,
+        barId,
+        partySize,
+        position: 0,
+        status: 'INSIDE',
+        qrCode: qrData,
+        admittedAt: new Date(),
+      },
+    });
+
+    await this.barsService.updateCapacity(barId, partySize);
+
+    await this.prisma.analyticsEvent.create({
+      data: { barId, userId: user.id, eventType: 'PATRON_ADMITTED' },
+    });
+
+    this.gateway.emitCapacityUpdate(barId, { currentCount: bar.currentCount + partySize });
+
+    return { ...entry, qrCodeDataUrl, userId: user.id, displayName };
   }
 
   private async recalculatePositions(barId: string) {
