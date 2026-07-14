@@ -128,6 +128,7 @@ export default function WaitScreen() {
           <View style={styles.qrBox}>
             <QRCode value={entry.qrCode} size={200} backgroundColor="#1c1c2e" color="#ffffff" />
           </View>
+          <Text style={styles.qrValue} selectable>{entry.qrCode}</Text>
         </View>
       )}
 
@@ -204,6 +205,7 @@ const styles = StyleSheet.create({
   },
   qrLabel: { fontSize: 17, fontWeight: 'bold', color: '#fff', marginBottom: 4 },
   qrHint: { color: '#6b7280', fontSize: 13, marginBottom: 16, textAlign: 'center' },
+  qrValue: { color: '#9ca3af', fontSize: 12, marginTop: 12, fontFamily: 'monospace', textAlign: 'center' },
   qrBox: {
     backgroundColor: '#1c1c2e',
     borderRadius: 12,
